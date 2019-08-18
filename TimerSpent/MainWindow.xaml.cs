@@ -90,64 +90,10 @@ namespace TimerSpent
             }
         }
 
-        /*private void RemoveLine(int index) // reverse index (last line is 0)
-        {
-            if (index == -1) // remove last
-            {
-                text.Remove(text.Split('\n').Reverse().ToList()[0].Count());
-            }
-            else
-            {
-                for (int i = 1; i <= index+1; i++)
-                {
-                    int count = System.Text.RegularExpressions.Regex.Split(text, "Time").Select(b=>b += "Time").LastOrDefault().Count();
-                    text.Remove(count);
-                }
-            }
-        }*/
-
         private void MenuItemEdit_Click(object sender, EventArgs e)
         {
             System.Diagnostics.Process.Start(docPath);
         }
-
-        /*private void Temp()
-        {
-            Save();
-            var parsedText = System.Text.RegularExpressions.Regex.Split(text, "Time").Select(b => b += "Time");
-            List<CustomTimeStamp> stampList = new List<CustomTimeStamp>();
-            foreach (var item in parsedText)
-            {
-                var splitedString = item.Split(' ');
-                string a = splitedString[0].Split('\n').LastOrDefault();
-                try
-                {
-                    stampList.Add(new CustomTimeStamp
-                    {
-                        Date = splitedString[0].Split('\n').LastOrDefault(),
-                        Time = splitedString[1],
-                        Balise = splitedString[2],
-                    });
-                }
-                catch
-                {
-
-                }
-            }
-
-            string path = @"C:\Users\Milo.Valérie-Toshiba\OneDrive\Documents\Code\RH Solution\repos\TimerSpent\TimerSpent\Resources\json1.json";
-            //var result = JsonConvert.DeserializeObject<CustomTimeStamp>(path);
-             
-            var j = new JavaScriptSerializer().Serialize(stampList);
-            System.IO.File.WriteAllText(path, j);
-            using (StreamReader r = new StreamReader(path))
-            {
-                string json = r.ReadToEnd();
-                List<CustomTimeStamp> items = JsonConvert.DeserializeObject<List<CustomTimeStamp>>(json);
-            }
-
-
-        }*/
 
         private void Save()
         {
