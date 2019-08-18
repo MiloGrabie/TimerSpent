@@ -1,0 +1,20 @@
+﻿<Window x:Class="TimerSpent.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TimerSpent"
+        mc:Ignorable="d"
+        Title="Timer" Height="145.612" Width="435.015">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Button Content="Start" HorizontalAlignment="Left" Height="59" Margin="10,10,0,0" VerticalAlignment="Top" Width="117" Click="Button_Click">
+        </Button>
+        <Button Content="Stop" HorizontalAlignment="Left" VerticalAlignment="Top" Width="117" Margin="146,10,0,0" Height="59" Click="Button_Click_1"/>
+        <TextBox Name="Textbox" HorizontalAlignment="Left" Height="20" Margin="10,79,0,0" TextWrapping="Wrap" Text="No Recording" VerticalAlignment="Top" Width="253"/>
+        <Button Content="Calculate" HorizontalAlignment="Left" Height="59" Margin="287,10,0,0" VerticalAlignment="Top" Width="117" Click="Calcul_Button"/>
+        <TextBox Name="TimeResult" HorizontalAlignment="Left" Height="20" Margin="287,79,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="117"/>
+    </Grid>
+</Window>
