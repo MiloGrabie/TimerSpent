@@ -59,6 +59,10 @@ namespace TimerSpent
             menuItemELL.Click += MenuItemELL_Click; ;
             contextMenu.MenuItems.Add(menuItemELL);
 
+            MenuItem menuItemRestart = new MenuItem { Text = "Redémarrer" };
+            menuItemRestart.Click += MenuItemRestart_Click; ; ;
+            contextMenu.MenuItems.Add(menuItemRestart);
+
             notifyIcon.ContextMenu = contextMenu;
             notifyIcon.DoubleClick += Click_Icon_ON;
 
@@ -75,6 +79,12 @@ namespace TimerSpent
 
             notifyIcon.Text = getAllTime();
             this.Hide();
+        }
+
+        private void MenuItemRestart_Click(object sender, EventArgs e)
+        {
+            System.Windows.Forms.Application.Restart();
+            System.Windows.Forms.Application.Exit();
         }
 
         private void MenuItemELL_Click(object sender, EventArgs e)
