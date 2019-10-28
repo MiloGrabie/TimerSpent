@@ -116,7 +116,10 @@ namespace TimerSpent
             using (StreamReader r = new StreamReader(docPath))
             {
                 string json = r.ReadToEnd();
-                text = JsonConvert.DeserializeObject<List<CustomTimeStamp>>(json);
+                if (json == "")
+                    text = new List<CustomTimeStamp>();
+                else
+                    text = JsonConvert.DeserializeObject<List<CustomTimeStamp>>(json);
             }
         }
 
@@ -128,7 +131,7 @@ namespace TimerSpent
         private void MainCall(object sender, EventArgs e)
         {
             Read();
-            if (text.LastOrDefault().Balise.Contains("StartTime"))
+            if ( text.Count() != 0 && text.LastOrDefault().Balise.Contains("StartTime"))
             {
                 Textbox.Text = "Recording";
                 IsRecording = true;
@@ -174,7 +177,7 @@ namespace TimerSpent
         private void Button_Click(object sender, RoutedEventArgs e) // Start
         {
             Read();
-            if (!text.LastOrDefault().Balise.Contains("StartTime"))
+            if (text.Count() == 0 || !text.LastOrDefault().Balise.Contains("StartTime"))
             {
                 text.Add(new CustomTimeStamp
                 {
