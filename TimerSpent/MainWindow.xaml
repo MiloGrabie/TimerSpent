@@ -10,9 +10,9 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <Button Content="Start" HorizontalAlignment="Left" Height="59" Margin="10,10,0,0" VerticalAlignment="Top" Width="117" Click="Button_Click">
+        <Button Content="Start" HorizontalAlignment="Left" Height="59" Margin="10,10,0,0" VerticalAlignment="Top" Width="117" Click="Button_Start">
         </Button>
-        <Button Content="Stop" HorizontalAlignment="Left" VerticalAlignment="Top" Width="117" Margin="146,10,0,0" Height="59" Click="Button_Click_1"/>
+        <Button Content="Stop" HorizontalAlignment="Left" VerticalAlignment="Top" Width="117" Margin="146,10,0,0" Height="59" Click="Button_Stop"/>
         <TextBox Name="Textbox" HorizontalAlignment="Left" Height="20" Margin="10,79,0,0" TextWrapping="Wrap" Text="No Recording" VerticalAlignment="Top" Width="253"/>
         <Button Content="Calculate" HorizontalAlignment="Left" Height="59" Margin="287,10,0,0" VerticalAlignment="Top" Width="117" Click="Calcul_Button"/>
         <TextBox Name="TimeResult" HorizontalAlignment="Left" Height="20" Margin="287,79,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" Width="117"/>

@@ -32,6 +32,7 @@ namespace TimerSpent
         private bool IsRecording;
         DispatcherTimer dispatcherTimer;
         string actualTime;
+        private int limitHour = 6;
 
         public MainWindow()
         {
@@ -85,12 +86,14 @@ namespace TimerSpent
         {
             System.Windows.Forms.Application.Restart();
             System.Windows.Forms.Application.Exit();
+            System.Windows.Forms.Application.ExitThread();
+            this.Close();
         }
 
         private void MenuItemELL_Click(object sender, EventArgs e)
         {
             Read();
-            if (text.Last().Balise.Contains("Stop"))
+            if (text.Last().Balise == BaliseType.Stop)
             {
                 text.Remove(text.Last());
                 text.Reverse();
@@ -113,6 +116,7 @@ namespace TimerSpent
 
         private void Read()
         {
+            //tempConverter();
             using (StreamReader r = new StreamReader(docPath))
             {
                 string json = r.ReadToEnd();
@@ -122,6 +126,27 @@ namespace TimerSpent
                     text = JsonConvert.DeserializeObject<List<CustomTimeStamp>>(json);
             }
         }
+        private void tempConverter()
+        {
+            List<OldCustomTimeStamp> tempText = new List<OldCustomTimeStamp>();
+            using (StreamReader r = new StreamReader(docPath.Replace(".json", " - Copie (7).json")))
+            {
+                string json = r.ReadToEnd();
+                if (json == "")
+                    tempText = new List<OldCustomTimeStamp>();
+                else
+                    tempText = JsonConvert.DeserializeObject<List<OldCustomTimeStamp>>(json);
+            }
+
+            text = new List<CustomTimeStamp>();
+            foreach (var item in tempText)
+            {
+                DateTime horodatage = Convert.ToDateTime(item.Date + " " + item.Time);
+                BaliseType balise = (item.Balise == "StartTime") ? BaliseType.Start : BaliseType.Stop;
+                text.Add(new CustomTimeStamp { Balise = balise, Horodatage = horodatage });
+            }
+        }
+
 
         private void MenuItem_Click_Close(object sender, EventArgs e)
         {
@@ -131,7 +156,7 @@ namespace TimerSpent
         private void MainCall(object sender, EventArgs e)
         {
             Read();
-            if ( text.Count() != 0 && text.LastOrDefault().Balise.Contains("StartTime"))
+            if (text.Count() != 0 && text.LastOrDefault().Balise == BaliseType.Start)
             {
                 Textbox.Text = "Recording";
                 IsRecording = true;
@@ -143,47 +168,45 @@ namespace TimerSpent
 
         private void Click_Icon_ON(object sender, EventArgs e)
         {
-            if(IsRecording)
+            if (IsRecording)
             {
-                Button_Click_1(new object(), new RoutedEventArgs());
+                Button_Stop(new object(), new RoutedEventArgs());
                 notifyIcon.Icon = Properties.Resources.IconOff;
                 IsRecording = false;
             }
             else
             {
-                Button_Click(new object(), new RoutedEventArgs());
+                Button_Start(new object(), new RoutedEventArgs());
                 notifyIcon.Icon = Properties.Resources.IconOn;
                 IsRecording = true;
             }
         }
-        
-        private void Button_Click_1(object sender, RoutedEventArgs e)   // Stop
+
+        private void Button_Stop(object sender, RoutedEventArgs e)   // Stop
         {
             Read();
-            if (!text.LastOrDefault().Balise.Contains("StopTime"))
+            if (text.LastOrDefault().Balise != BaliseType.Stop)
             {
                 Textbox.Text = "Not recording";
                 text.Add(new CustomTimeStamp
                 {
-                    Date = DateTime.Now.Date.ToString("dd/MM/yyyy"),
-                    Time = DateTime.Now.ToString("HH:mm:ss"),
-                    Balise = "StopTime"
+                    Horodatage = DateTime.Now,
+                    Balise = BaliseType.Stop
                 });
                 Save();
                 IsRecording = false;
             }
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e) // Start
+        private void Button_Start(object sender, RoutedEventArgs e) // Start
         {
             Read();
-            if (text.Count() == 0 || !text.LastOrDefault().Balise.Contains("StartTime"))
+            if (text.Count() == 0 || text.LastOrDefault().Balise != BaliseType.Start)
             {
                 text.Add(new CustomTimeStamp
                 {
-                    Date = DateTime.Now.Date.ToString("dd/MM/yyyy"),
-                    Time = DateTime.Now.ToString("HH:mm:ss"),
-                    Balise = "StartTime"
+                    Horodatage = DateTime.Now,
+                    Balise = BaliseType.Start
                 });
                 Textbox.Text = "Recording";
                 Save();
@@ -200,40 +223,43 @@ namespace TimerSpent
         private string getAllTime()
         {
             Read();
+            DateTime now = DateTime.Now;
+            if (DateTime.Now.Hour < limitHour)
+                now = now.AddDays(-1);
+            DateTime yesterday = new DateTime(now.Year, now.Month, now.Day, limitHour, now.Minute, now.Second);
+            TimeSpan timeInDay = new TimeSpan();
             double hour = 0;
-            for (int i = 0; i < text.Count; i=i+2)
+            for (int i = 0; i < text.Count; i = i + 2)
             {
                 CustomTimeStamp startItem = text[i];
                 try
                 {
                     CustomTimeStamp stopItem = text[i + 1];
-                    if (startItem.Balise == "StartTime")
+                    if (startItem.Balise == BaliseType.Start && stopItem.Balise == BaliseType.Stop)
                     {
-                        if (stopItem.Balise == "StopTime")
-                        {
-                            hour += (
-                            Convert.ToDateTime(stopItem.Date + " " + stopItem.Time) -
-                            Convert.ToDateTime(startItem.Date + " " + startItem.Time)
-                            ).TotalHours;
-                        }
-                        else { }
+                        hour += (stopItem.Horodatage - startItem.Horodatage).TotalHours;
+                        if (startItem.Horodatage.Date == DateTime.Now.Date)
+                            continue;
+                        if (startItem.Horodatage >= yesterday)
+                            timeInDay = timeInDay.Add(new TimeSpan((stopItem.Horodatage - startItem.Horodatage).Ticks));
                     }
                     else
                     {
-                        hour += (DateTime.Now - Convert.ToDateTime(startItem.Date + " " + startItem.Time))
-                            .TotalHours;
+                        hour += (DateTime.Now - startItem.Horodatage).TotalHours;
+                        if (startItem.Horodatage.Date >= yesterday)
+                            timeInDay = timeInDay.Add(new TimeSpan((DateTime.Now - startItem.Horodatage).Ticks));
                     }
                 }
                 catch
                 {
-                    hour += (DateTime.Now - Convert.ToDateTime(startItem.Date + " " + startItem.Time))
-                        .TotalHours;
+                    hour += (DateTime.Now - startItem.Horodatage).TotalHours;
                 }
             }
             TimeSpan timeSpan = TimeSpan.FromHours(hour);
             int hours = (timeSpan.Days * 24) + timeSpan.Hours;
             int min = timeSpan.Minutes;
             string h = hours.ToString() + " h - " + min.ToString() + " min";
+            h += "\nAujourd'hui : " + new DateTime(timeInDay.Ticks).ToString("HH:mm").Replace(":", "h");
             return h;
 
             /*List<DateTime> startList = text.Where(a => a.Balise.Contains("Start")).Select(a=>Convert.ToDateTime(a.Date+" "+a.Time)).ToList();
@@ -255,15 +281,15 @@ namespace TimerSpent
 
         }
 
-        public List<DateTime> treatLine(List<CustomTimeStamp> list)
-        {
-            List<DateTime> timeStamp = new List<DateTime>();
-            foreach (CustomTimeStamp stamp in list)
-            {
-                timeStamp.Add(Convert.ToDateTime(stamp.Date));
-            }
-            return timeStamp;
-        }
+        //public List<DateTime> treatLine(List<CustomTimeStamp> list)
+        //{
+        //    List<DateTime> timeStamp = new List<DateTime>();
+        //    foreach (CustomTimeStamp stamp in list)
+        //    {
+        //        timeStamp.Add(Convert.ToDateTime(stamp.Date));
+        //    }
+        //    return timeStamp;
+        //}
 
         /*public void CalculMoyenne()
         {
@@ -296,13 +322,25 @@ namespace TimerSpent
             double average = total / count;
         }*/
 
-       
+
     }
 
     public class CustomTimeStamp
     {
+        public DateTime Horodatage { set; get; }
+        public BaliseType Balise { set; get; }
+    }
+
+    public class OldCustomTimeStamp
+    {
         public string Date { set; get; }
         public string Time { set; get; }
         public string Balise { set; get; }
+    }
+
+    public enum BaliseType
+    {
+        Stop,
+        Start
     }
 }
