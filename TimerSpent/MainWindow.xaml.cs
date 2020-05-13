@@ -246,8 +246,7 @@ namespace TimerSpent
                     else
                     {
                         hour += (DateTime.Now - startItem.Horodatage).TotalHours;
-                        if (startItem.Horodatage.Date >= yesterday)
-                            timeInDay = timeInDay.Add(new TimeSpan((DateTime.Now - startItem.Horodatage).Ticks));
+                        
                     }
                 }
                 catch
@@ -255,6 +254,8 @@ namespace TimerSpent
                     hour += (DateTime.Now - startItem.Horodatage).TotalHours;
                 }
             }
+            if (text.Last().Balise == BaliseType.Start)
+                timeInDay = timeInDay.Add(new TimeSpan((DateTime.Now - text.Last().Horodatage).Ticks));
             TimeSpan timeSpan = TimeSpan.FromHours(hour);
             int hours = (timeSpan.Days * 24) + timeSpan.Hours;
             int min = timeSpan.Minutes;
