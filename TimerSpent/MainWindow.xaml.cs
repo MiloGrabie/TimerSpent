@@ -238,10 +238,10 @@ namespace TimerSpent
                     if (startItem.Balise == BaliseType.Start && stopItem.Balise == BaliseType.Stop)
                     {
                         hour += (stopItem.Horodatage - startItem.Horodatage).TotalHours;
-                        if (startItem.Horodatage.Date == DateTime.Now.Date)
-                            continue;
                         if (startItem.Horodatage >= yesterday)
                             timeInDay = timeInDay.Add(new TimeSpan((stopItem.Horodatage - startItem.Horodatage).Ticks));
+                        if (startItem.Horodatage.Date == DateTime.Now.Date)
+                            continue;
                     }
                     else
                     {
