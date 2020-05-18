@@ -141,7 +141,9 @@ namespace TimerSpent
         private void initCouple()
         {
             stampCouples.Clear();
-            for (int i = 0; i < text.Count; i = i + 2)
+            bool isPair = text.Count() % 2 == 0;
+            int stopCount = isPair ? text.Count : text.Count - 1 ;
+            for (int i = 0; i < stopCount; i = i + 2)
             {
                 if (text[i].Balise == BaliseType.Start)
                 {
