@@ -26,7 +26,8 @@ namespace TimerSpent
     public partial class MainWindow : Window
     {
         private string docPath;
-        private List<CustomTimeStamp> text;
+        private List<InternalCustomTimeStamp> text;
+        private List<StampCouple> stampCouples;
         private WordsManagerLib.WordsManager wordsManager;
         NotifyIcon notifyIcon = new NotifyIcon();
         private bool IsRecording;
@@ -68,6 +69,8 @@ namespace TimerSpent
             notifyIcon.DoubleClick += Click_Icon_ON;
 
             docPath = System.IO.Path.Combine(onedrivePath, @"Documents\TimeSpent\TimeFile.json");
+            text = new List<InternalCustomTimeStamp>();
+            stampCouples = new List<StampCouple>();
             Read();
             wordsManager = new WordsManagerLib.WordsManager();
 
@@ -110,41 +113,72 @@ namespace TimerSpent
 
         private void Save()
         {
-            var jsonString = new JavaScriptSerializer().Serialize(text);
+            var temp = new List<ExternalCustomTimeStamp>();
+            text.ForEach(a => temp.Add(new ExternalCustomTimeStamp(a)));
+            var jsonString = new JavaScriptSerializer().Serialize(temp);
             File.WriteAllText(docPath, jsonString);
         }
 
         private void Read()
         {
+            text.Clear();
             //tempConverter();
             using (StreamReader r = new StreamReader(docPath))
             {
                 string json = r.ReadToEnd();
                 if (json == "")
-                    text = new List<CustomTimeStamp>();
+                    text = new List<InternalCustomTimeStamp>();
                 else
-                    text = JsonConvert.DeserializeObject<List<CustomTimeStamp>>(json);
+                {
+                    var temp = JsonConvert.DeserializeObject<List<ExternalCustomTimeStamp>>(json);
+                    temp.ForEach(a => text.Add(new InternalCustomTimeStamp(a)));
+                }
             }
+
+            initCouple();
         }
+
+        private void initCouple()
+        {
+            stampCouples.Clear();
+            for (int i = 0; i < text.Count; i = i + 2)
+            {
+                if (text[i].Balise == BaliseType.Start)
+                {
+                    stampCouples.Add(new StampCouple
+                    {
+                        startTime = text[i],
+                        stopTime = text[i + 1]
+                    });
+                }
+            }
+            if (text.Count() % 2 == 1)
+                stampCouples.Add(new StampCouple
+                {
+                    startTime = text.Last(),
+                    stopTime = new InternalCustomTimeStamp
+                    {
+                        Horodatage = DateTime.Now,
+                        Balise = BaliseType.Stop
+                    }
+                });
+          
+        }
+
         private void tempConverter()
         {
-            List<OldCustomTimeStamp> tempText = new List<OldCustomTimeStamp>();
-            using (StreamReader r = new StreamReader(docPath.Replace(".json", " - Copie (7).json")))
+            List<InternalCustomTimeStamp> tempText = new List<InternalCustomTimeStamp>();
+            using (StreamReader r = new StreamReader(docPath.Replace(".json", " - Copie (8).json")))
             {
                 string json = r.ReadToEnd();
                 if (json == "")
-                    tempText = new List<OldCustomTimeStamp>();
+                    tempText = new List<InternalCustomTimeStamp>();
                 else
-                    tempText = JsonConvert.DeserializeObject<List<OldCustomTimeStamp>>(json);
+                    tempText = JsonConvert.DeserializeObject<List<InternalCustomTimeStamp>>(json);
             }
 
-            text = new List<CustomTimeStamp>();
-            foreach (var item in tempText)
-            {
-                DateTime horodatage = Convert.ToDateTime(item.Date + " " + item.Time);
-                BaliseType balise = (item.Balise == "StartTime") ? BaliseType.Start : BaliseType.Stop;
-                text.Add(new CustomTimeStamp { Balise = balise, Horodatage = horodatage });
-            }
+            text = tempText;
+            //tempText.ForEach(a => text.Add(new InternalCustomTimeStamp(a)));
         }
 
 
@@ -188,7 +222,7 @@ namespace TimerSpent
             if (text.LastOrDefault().Balise != BaliseType.Stop)
             {
                 Textbox.Text = "Not recording";
-                text.Add(new CustomTimeStamp
+                text.Add(new InternalCustomTimeStamp
                 {
                     Horodatage = DateTime.Now,
                     Balise = BaliseType.Stop
@@ -203,7 +237,7 @@ namespace TimerSpent
             Read();
             if (text.Count() == 0 || text.LastOrDefault().Balise != BaliseType.Start)
             {
-                text.Add(new CustomTimeStamp
+                text.Add(new InternalCustomTimeStamp
                 {
                     Horodatage = DateTime.Now,
                     Balise = BaliseType.Start
@@ -228,36 +262,17 @@ namespace TimerSpent
                 now = now.AddDays(-1);
             DateTime yesterday = new DateTime(now.Year, now.Month, now.Day, limitHour, now.Minute, now.Second);
             TimeSpan timeInDay = new TimeSpan();
-            double hour = 0;
-            for (int i = 0; i < text.Count; i = i + 2)
+            double seconds = 0;
+            foreach (var item in stampCouples)
             {
-                CustomTimeStamp startItem = text[i];
-                try
-                {
-                    CustomTimeStamp stopItem = text[i + 1];
-                    if (startItem.Balise == BaliseType.Start && stopItem.Balise == BaliseType.Stop)
-                    {
-                        hour += (stopItem.Horodatage - startItem.Horodatage).TotalHours;
-                        if (startItem.Horodatage >= yesterday)
-                            timeInDay = timeInDay.Add(new TimeSpan((stopItem.Horodatage - startItem.Horodatage).Ticks));
-                        if (startItem.Horodatage.Date == DateTime.Now.Date)
-                            continue;
-                    }
-                    else
-                    {
-                        hour += (DateTime.Now - startItem.Horodatage).TotalHours;
-                        
-                    }
-                }
-                catch
-                {
-                    hour += (DateTime.Now - startItem.Horodatage).TotalHours;
-                }
+                seconds += item.elapsedTime.TotalSeconds;
             }
+
+           
             if (text.Last().Balise == BaliseType.Start)
                 timeInDay = timeInDay.Add(new TimeSpan((DateTime.Now - text.Last().Horodatage).Ticks));
-            TimeSpan timeSpan = TimeSpan.FromHours(hour);
-            int hours = (timeSpan.Days * 24) + timeSpan.Hours;
+            TimeSpan timeSpan = TimeSpan.FromSeconds(seconds);
+            int hours = (timeSpan.Days*24) + timeSpan.Hours;
             int min = timeSpan.Minutes;
             string h = hours.ToString() + " h - " + min.ToString() + " min";
             h += "\nAujourd'hui : " + new DateTime(timeInDay.Ticks).ToString("HH:mm").Replace(":", "h");
@@ -326,14 +341,40 @@ namespace TimerSpent
 
     }
 
-    public class CustomTimeStamp
+    public class StampCouple
     {
+        public TimeSpan elapsedTime { get
+            {
+                return (stopTime.Horodatage - startTime.Horodatage);
+            }
+        }
+        public InternalCustomTimeStamp startTime { get; set; }
+        public InternalCustomTimeStamp stopTime { get; set; }
+    }
+
+    public class InternalCustomTimeStamp
+    {
+        public InternalCustomTimeStamp()
+        {}
+        public InternalCustomTimeStamp(ExternalCustomTimeStamp item)
+        {
+            Horodatage = Convert.ToDateTime(item.Date + " " + item.Time);
+            Balise = (item.Balise == "start") ? BaliseType.Start : BaliseType.Stop;
+        }
+
         public DateTime Horodatage { set; get; }
         public BaliseType Balise { set; get; }
     }
 
-    public class OldCustomTimeStamp
+    public class ExternalCustomTimeStamp
     {
+        public ExternalCustomTimeStamp() { }
+        public ExternalCustomTimeStamp(InternalCustomTimeStamp item)
+        {
+            Date = item.Horodatage.ToShortDateString();
+            Time = item.Horodatage.ToShortTimeString();
+            Balise = (item.Balise == BaliseType.Start) ? "start" : "stop";
+        }
         public string Date { set; get; }
         public string Time { set; get; }
         public string Balise { set; get; }
