@@ -17,6 +17,7 @@ using System.Windows.Forms;
 using System.Windows.Threading;
 using Newtonsoft.Json;
 using System.Web.Script.Serialization;
+using TimerSpent.ObjetMetier;
 
 namespace TimerSpent
 {
@@ -26,7 +27,7 @@ namespace TimerSpent
     public partial class MainWindow : Window
     {
         private string docPath;
-        private List<InternalCustomTimeStamp> text;
+        private List<InternalCustomTimeStamp> records;
         private List<StampCouple> stampCouples;
         private WordsManagerLib.WordsManager wordsManager;
         NotifyIcon notifyIcon = new NotifyIcon();
@@ -35,17 +36,38 @@ namespace TimerSpent
         string actualTime;
         private int limitHour = 6;
 
+        public ProjectManager projectManager;
+        private static MainWindow instance;
+
         public MainWindow()
         {
             InitializeComponent();
-            const string userRoot = "HKEY_CURRENT_USER";
-            const string subkey = @"Software\Microsoft\OneDrive";
-            const string keyName = userRoot + "\\" + subkey;
 
-            string onedrivePath = (string)Microsoft.Win32.Registry.GetValue(keyName,
-            "UserFolder",
-            "Return this default if NoSuchName does not exist.");
+            projectManager = new ProjectManager();
 
+            CreateMenuItem();
+
+            docPath = System.IO.Path.Combine(GetOneDrivePath(), @"Documents\TimeSpent\TimeFile.json");
+            records = new List<InternalCustomTimeStamp>();
+            stampCouples = new List<StampCouple>();
+            Read();
+            wordsManager = new WordsManagerLib.WordsManager();
+            InitSelectedProjectNumber(records.Last());
+
+            //Temp();
+            MainCall(new object(), new EventArgs());
+            dispatcherTimer = new DispatcherTimer();
+            dispatcherTimer.Tick += new EventHandler(MainCall);
+            dispatcherTimer.Interval = new TimeSpan(0, 0, 60);
+            dispatcherTimer.Start();
+
+            Refresh_TextNotifyIcon();
+            this.Hide();
+            instance = this;
+        }
+
+        private void CreateMenuItem()
+        {
             notifyIcon.Icon = Properties.Resources.IconOff;
             notifyIcon.Visible = true;
             ContextMenu contextMenu = new ContextMenu();
@@ -62,27 +84,29 @@ namespace TimerSpent
             contextMenu.MenuItems.Add(menuItemELL);
 
             MenuItem menuItemRestart = new MenuItem { Text = "Redémarrer" };
-            menuItemRestart.Click += MenuItemRestart_Click; ; ;
+            menuItemRestart.Click += MenuItemRestart_Click;
             contextMenu.MenuItems.Add(menuItemRestart);
+
+            MenuItem menuItemProject_Selection = new MenuItem { Text = "Projet..." };
+            //menuItemRestart.Click += MenuItemRestart_Click;
+            contextMenu.MenuItems.Add(menuItemProject_Selection);
+
+            projectManager.AddMenuItem(menuItemProject_Selection);
 
             notifyIcon.ContextMenu = contextMenu;
             notifyIcon.DoubleClick += Click_Icon_ON;
 
-            docPath = System.IO.Path.Combine(onedrivePath, @"Documents\TimeSpent\TimeFile.json");
-            text = new List<InternalCustomTimeStamp>();
-            stampCouples = new List<StampCouple>();
-            Read();
-            wordsManager = new WordsManagerLib.WordsManager();
+        }
 
-            //Temp();
-            MainCall(new object(), new EventArgs());
-            dispatcherTimer = new DispatcherTimer();
-            dispatcherTimer.Tick += new EventHandler(MainCall);
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 60);
-            dispatcherTimer.Start();
+        public static string GetOneDrivePath()
+        {
+            const string userRoot = "HKEY_CURRENT_USER";
+            const string subkey = @"Software\Microsoft\OneDrive";
+            const string keyName = userRoot + "\\" + subkey;
 
-            notifyIcon.Text = getAllTime();
-            this.Hide();
+            return (string)Microsoft.Win32.Registry.GetValue(keyName,
+            "UserFolder",
+            "Return this default if NoSuchName does not exist.");
         }
 
         private void MenuItemRestart_Click(object sender, EventArgs e)
@@ -96,12 +120,12 @@ namespace TimerSpent
         private void MenuItemELL_Click(object sender, EventArgs e)
         {
             Read();
-            if (text.Last().Balise == BaliseType.Stop)
+            if (records.Last().Balise == BaliseType.Stop)
             {
-                text.Remove(text.Last());
-                text.Reverse();
-                text.Remove(text.ToList()[1]);
-                text.Reverse();
+                records.Remove(records.Last());
+                records.Reverse();
+                records.Remove(records.ToList()[1]);
+                records.Reverse();
                 Save();
             }
         }
@@ -111,60 +135,66 @@ namespace TimerSpent
             System.Diagnostics.Process.Start(docPath);
         }
 
+
         private void Save()
         {
             var temp = new List<ExternalCustomTimeStamp>();
-            text.ForEach(a => temp.Add(new ExternalCustomTimeStamp(a)));
+            records.ForEach(a => temp.Add(new ExternalCustomTimeStamp(a)));
             var jsonString = new JavaScriptSerializer().Serialize(temp);
             File.WriteAllText(docPath, jsonString);
         }
 
         private void Read()
         {
-            text.Clear();
+            records.Clear();
             //tempConverter();
             using (StreamReader r = new StreamReader(docPath))
             {
                 string json = r.ReadToEnd();
                 if (json == "")
-                    text = new List<InternalCustomTimeStamp>();
+                    records = new List<InternalCustomTimeStamp>();
                 else
                 {
                     var temp = JsonConvert.DeserializeObject<List<ExternalCustomTimeStamp>>(json);
-                    temp.ForEach(a => text.Add(new InternalCustomTimeStamp(a)));
+                    temp.ForEach(a => records.Add(new InternalCustomTimeStamp(a)));
                 }
             }
 
             initCouple();
         }
 
+        private void InitSelectedProjectNumber(InternalCustomTimeStamp stamp)
+        {
+            projectManager.SelectedProjectNumber = stamp.ProjectNumber;
+        }
+
         private void initCouple()
         {
             stampCouples.Clear();
-            bool isPair = text.Count() % 2 == 0;
-            int stopCount = isPair ? text.Count : text.Count - 1 ;
+            bool isPair = records.Count() % 2 == 0;
+            int stopCount = isPair ? records.Count : records.Count - 1 ;
             for (int i = 0; i < stopCount; i = i + 2)
             {
-                if (text[i].Balise == BaliseType.Start)
+                if (records[i].Balise == BaliseType.Start)
                 {
                     stampCouples.Add(new StampCouple
                     {
-                        startTime = text[i],
-                        stopTime = text[i + 1]
+                        startTime = records[i],
+                        stopTime = records[i + 1]
                     });
                 }
             }
-            if (text.Count() % 2 == 1)
+            if (records.Count() % 2 == 1)
                 stampCouples.Add(new StampCouple
                 {
-                    startTime = text.Last(),
+                    startTime = records.Last(),
                     stopTime = new InternalCustomTimeStamp
                     {
                         Horodatage = DateTime.Now,
                         Balise = BaliseType.Stop
                     }
                 });
-          
+        
         }
 
         private void tempConverter()
@@ -179,7 +209,7 @@ namespace TimerSpent
                     tempText = JsonConvert.DeserializeObject<List<InternalCustomTimeStamp>>(json);
             }
 
-            text = tempText;
+            records = tempText;
             //tempText.ForEach(a => text.Add(new InternalCustomTimeStamp(a)));
         }
 
@@ -192,14 +222,20 @@ namespace TimerSpent
         private void MainCall(object sender, EventArgs e)
         {
             Read();
-            if (text.Count() != 0 && text.LastOrDefault().Balise == BaliseType.Start)
+            if (records.Count() != 0 && records.LastOrDefault().Balise == BaliseType.Start)
             {
                 Textbox.Text = "Recording";
                 IsRecording = true;
                 notifyIcon.Icon = Properties.Resources.IconOn;
             }
+            Refresh_TextNotifyIcon();
+        }
+
+        public void Refresh_TextNotifyIcon()
+        {
             actualTime = getAllTime();
-            notifyIcon.Text = actualTime;
+            string text = actualTime + $"\nProjet sélectionné : {projectManager.SelectedProjectNumber}";
+            notifyIcon.Text = text;
         }
 
         private void Click_Icon_ON(object sender, EventArgs e)
@@ -221,13 +257,14 @@ namespace TimerSpent
         private void Button_Stop(object sender, RoutedEventArgs e)   // Stop
         {
             Read();
-            if (text.LastOrDefault().Balise != BaliseType.Stop)
+            if (records.LastOrDefault().Balise != BaliseType.Stop)
             {
                 Textbox.Text = "Not recording";
-                text.Add(new InternalCustomTimeStamp
+                records.Add(new InternalCustomTimeStamp
                 {
                     Horodatage = DateTime.Now,
-                    Balise = BaliseType.Stop
+                    Balise = BaliseType.Stop,
+                    ProjectNumber = projectManager.SelectedProjectNumber
                 });
                 Save();
                 IsRecording = false;
@@ -237,12 +274,13 @@ namespace TimerSpent
         private void Button_Start(object sender, RoutedEventArgs e) // Start
         {
             Read();
-            if (text.Count() == 0 || text.LastOrDefault().Balise != BaliseType.Start)
+            if (records.Count() == 0 || records.LastOrDefault().Balise != BaliseType.Start)
             {
-                text.Add(new InternalCustomTimeStamp
+                records.Add(new InternalCustomTimeStamp
                 {
                     Horodatage = DateTime.Now,
-                    Balise = BaliseType.Start
+                    Balise = BaliseType.Start,
+                    ProjectNumber = projectManager.SelectedProjectNumber
                 });
                 Textbox.Text = "Recording";
                 Save();
@@ -271,8 +309,8 @@ namespace TimerSpent
             }
 
            
-            if (text.Last().Balise == BaliseType.Start)
-                timeInDay = timeInDay.Add(new TimeSpan((DateTime.Now - text.Last().Horodatage).Ticks));
+            if (records.Last().Balise == BaliseType.Start)
+                timeInDay = timeInDay.Add(new TimeSpan((DateTime.Now - records.Last().Horodatage).Ticks));
             TimeSpan timeSpan = TimeSpan.FromSeconds(seconds);
             int hours = (timeSpan.Days*24) + timeSpan.Hours;
             int min = timeSpan.Minutes;
@@ -280,67 +318,12 @@ namespace TimerSpent
             h += "\nAujourd'hui : " + new DateTime(timeInDay.Ticks).ToString("HH:mm").Replace(":", "h");
             return h;
 
-            /*List<DateTime> startList = text.Where(a => a.Balise.Contains("Start")).Select(a=>Convert.ToDateTime(a.Date+" "+a.Time)).ToList();
-            List<DateTime> stopList = text.Where(a => a.Balise.Contains("Stop")).Select(a=>Convert.ToDateTime(a.Date + " " + a.Time)).ToList();
-
-            double hour = 0;
-            foreach (DateTime stamp in startList)
-            {
-                try
-                {
-                    hour += (stopList[startList.IndexOf(stamp)] - stamp).TotalHours;
-                }
-                catch (Exception)
-                {
-                    hour += (DateTime.Now - stamp).TotalHours;
-                }
-
-            }*/
-
         }
 
-        //public List<DateTime> treatLine(List<CustomTimeStamp> list)
-        //{
-        //    List<DateTime> timeStamp = new List<DateTime>();
-        //    foreach (CustomTimeStamp stamp in list)
-        //    {
-        //        timeStamp.Add(Convert.ToDateTime(stamp.Date));
-        //    }
-        //    return timeStamp;
-        //}
-
-        /*public void CalculMoyenne()
+        public static MainWindow GetInstance()
         {
-            Read();
-            wordsManager.stockLine(text, true);
-            List<WordsManagerLib.Line> start = wordsManager.getLine("Start");
-            List<DateTime> startList = treatLine(start);
-            List<WordsManagerLib.Line> stop = wordsManager.getLine("Stop");
-            List<DateTime> stopList = treatLine(stop);
-
-            Dictionary<DateTime,double> deltaTime = new Dictionary<DateTime, double>();
-            DateTime actualDay = new DateTime();
-            double timeSpans = 0;
-            foreach (var item in startList)
-            {
-                timeSpans += (stopList[startList.IndexOf(item)] - item).TotalHours;
-                if (actualDay != item.Date)
-                {
-                    actualDay = item.Date;
-                    deltaTime.Add(actualDay, timeSpans);
-                    timeSpans = 0;
-                }
-            }
-            double count = Convert.ToDouble(deltaTime.Count());
-            double total = 0;
-            foreach (var item in deltaTime)
-            {
-                total += item.Value;
-            }
-            double average = total / count;
-        }*/
-
-
+            return instance;
+        }
     }
 
     public class StampCouple
@@ -362,10 +345,12 @@ namespace TimerSpent
         {
             Horodatage = Convert.ToDateTime(item.Date + " " + item.Time);
             Balise = (item.Balise == "start") ? BaliseType.Start : BaliseType.Stop;
+            ProjectNumber = item.ProjectNumber;
         }
 
         public DateTime Horodatage { set; get; }
         public BaliseType Balise { set; get; }
+        public int ProjectNumber { set; get; }
     }
 
     public class ExternalCustomTimeStamp
@@ -376,10 +361,12 @@ namespace TimerSpent
             Date = item.Horodatage.ToShortDateString();
             Time = item.Horodatage.ToShortTimeString();
             Balise = (item.Balise == BaliseType.Start) ? "start" : "stop";
+            ProjectNumber = item.ProjectNumber;
         }
         public string Date { set; get; }
         public string Time { set; get; }
         public string Balise { set; get; }
+        public int ProjectNumber { set; get; }
     }
 
     public enum BaliseType
