@@ -22,14 +22,5 @@ namespace TimerSpent.Properties {
                 return defaultInstance;
             }
         }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("C:\\Users\\Milo\\OneDrive\\Documents")]
-        public string test {
-            get {
-                return ((string)(this["test"]));
-            }
-        }
     }
 }
