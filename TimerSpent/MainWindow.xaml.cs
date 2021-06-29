@@ -48,6 +48,10 @@ namespace TimerSpent
             CreateMenuItem();
 
             docPath = System.IO.Path.Combine(GetOneDrivePath(), @"Documents\TimeSpent\TimeFile.json");
+            if (!File.Exists(docPath))
+            {
+                docPath = ConfigFiles.Show();
+            }
             records = new List<InternalCustomTimeStamp>();
             stampCouples = new List<StampCouple>();
             Read();
@@ -64,6 +68,7 @@ namespace TimerSpent
             Refresh_TextNotifyIcon();
             this.Hide();
             instance = this;
+            //ExportToExcelFormat();
         }
 
         private void CreateMenuItem()
@@ -234,7 +239,7 @@ namespace TimerSpent
         public void Refresh_TextNotifyIcon()
         {
             actualTime = getAllTime();
-            string text = actualTime + $"\nProjet sélectionné : {projectManager.SelectedProjectNumber}";
+            string text = actualTime + $"\nProjet : {projectManager.SelectedProject.Description}";
             notifyIcon.Text = text;
         }
 
@@ -315,7 +320,7 @@ namespace TimerSpent
             int hours = (timeSpan.Days*24) + timeSpan.Hours;
             int min = timeSpan.Minutes;
             string h = hours.ToString() + " h - " + min.ToString() + " min";
-            h += "\nAujourd'hui : " + new DateTime(timeInDay.Ticks).ToString("HH:mm").Replace(":", "h");
+            //h += "\nAujourd'hui : " + new DateTime(timeInDay.Ticks).ToString("HH:mm").Replace(":", "h");
             return h;
 
         }
@@ -324,6 +329,32 @@ namespace TimerSpent
         {
             return instance;
         }
+
+        public void ExportToExcelFormat()
+        {
+            var temp = new List<DurationTimeStamp>();
+            stampCouples.ForEach(a => temp.Add(new DurationTimeStamp(a, projectManager)));
+            var jsonString = new JavaScriptSerializer().Serialize(temp);
+            string path = System.IO.Path.Combine(GetOneDrivePath(), @"Documents\TimeSpent\TimeFileExcel.json");
+            File.WriteAllText(path, jsonString);
+        }
+
+
+    }
+
+    internal class DurationTimeStamp
+    {
+        public DurationTimeStamp(StampCouple a, ProjectManager projectManager)
+        {
+            StartTime = a.startTime.Horodatage.ToString();
+            elapsedTime = a.elapsedTime.ToString();
+            project = projectManager.Projects.First(p => p.Number == a.startTime.ProjectNumber).Description;
+        }
+
+        public string StartTime { get; set; }
+        public string elapsedTime { get; set; }
+        public string project { get; set; }
+
     }
 
     public class StampCouple

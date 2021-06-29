@@ -15,7 +15,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
-    <PublishUrl>C:\Users\Milo Grabié\OneDrive\Documents\Code\TimeSpentPublication\</PublishUrl>
+    <PublishUrl>C:\Users\Milo\OneDrive\Documents\Code\TimeSpentClickOnce\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
     <UpdateEnabled>false</UpdateEnabled>
@@ -25,7 +25,7 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <ApplicationRevision>6</ApplicationRevision>
+    <ApplicationRevision>8</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -51,7 +51,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>1DE0FE5F1B53B0EA1DDEAD00C4C33481488E8F0D</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>E6C25C3D919E3E5777BABA295E9964B74BE01704</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
     <ManifestKeyFile>TimerSpent_TemporaryKey.pfx</ManifestKeyFile>
@@ -92,9 +92,17 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ConfigFiles.xaml.cs">
+      <DependentUpon>ConfigFiles.xaml</DependentUpon>
+    </Compile>
     <Compile Include="ObjetMetier\Project.cs" />
     <Compile Include="ObjetMetier\ProjectManager.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="WordsManager.cs" />
+    <Page Include="ConfigFiles.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
