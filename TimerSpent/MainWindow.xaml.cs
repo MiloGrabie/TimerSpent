@@ -18,6 +18,7 @@ using System.Windows.Threading;
 using Newtonsoft.Json;
 using System.Web.Script.Serialization;
 using TimerSpent.ObjetMetier;
+using Path = System.IO.Path;
 
 namespace TimerSpent
 {
@@ -76,15 +77,17 @@ namespace TimerSpent
             notifyIcon.Icon = Properties.Resources.IconOff;
             notifyIcon.Visible = true;
             ContextMenu contextMenu = new ContextMenu();
-            MenuItem menuItemClose = new MenuItem { Text = "Close" };
-            menuItemClose.Click += MenuItem_Click_Close;
-            contextMenu.MenuItems.Add(menuItemClose);
+
+            MenuItem menuItemProject_Selection = new MenuItem { Text = "Projet..." };
+            //menuItemRestart.Click += MenuItemRestart_Click;
+            contextMenu.MenuItems.Add(menuItemProject_Selection);
+            projectManager.AddMenuItem(menuItemProject_Selection);
 
             MenuItem menuItemEdit = new MenuItem { Text = "Edit" };
             menuItemEdit.Click += MenuItemEdit_Click;
             contextMenu.MenuItems.Add(menuItemEdit);
 
-            MenuItem menuItemELL = new MenuItem { Text = "Erase last line" };
+            MenuItem menuItemELL = new MenuItem { Text = "Effacer dernière ligne" };
             menuItemELL.Click += MenuItemELL_Click; ;
             contextMenu.MenuItems.Add(menuItemELL);
 
@@ -92,15 +95,21 @@ namespace TimerSpent
             menuItemRestart.Click += MenuItemRestart_Click;
             contextMenu.MenuItems.Add(menuItemRestart);
 
-            MenuItem menuItemProject_Selection = new MenuItem { Text = "Projet..." };
-            //menuItemRestart.Click += MenuItemRestart_Click;
-            contextMenu.MenuItems.Add(menuItemProject_Selection);
+            MenuItem menuItemOpenDir = new MenuItem { Text = "Ouvrir dossier" };
+            menuItemOpenDir.Click += MenuItemOpenDir_Click;
+            contextMenu.MenuItems.Add(menuItemOpenDir);
 
-            projectManager.AddMenuItem(menuItemProject_Selection);
+            MenuItem menuItemClose = new MenuItem { Text = "Close" };
+            menuItemClose.Click += MenuItem_Click_Close;
+            contextMenu.MenuItems.Add(menuItemClose);
 
             notifyIcon.ContextMenu = contextMenu;
             notifyIcon.DoubleClick += Click_Icon_ON;
+        }
 
+        private void MenuItemOpenDir_Click(object sender, EventArgs e)
+        {
+            System.Diagnostics.Process.Start(Path.GetDirectoryName(docPath));
         }
 
         public static string GetOneDrivePath()
@@ -165,7 +174,7 @@ namespace TimerSpent
                 }
             }
 
-            initCouple();
+            InitCouple();
         }
 
         private void InitSelectedProjectNumber(InternalCustomTimeStamp stamp)
@@ -173,7 +182,7 @@ namespace TimerSpent
             projectManager.SelectedProjectNumber = stamp.ProjectNumber;
         }
 
-        private void initCouple()
+        private void InitCouple()
         {
             stampCouples.Clear();
             bool isPair = records.Count() % 2 == 0;
@@ -185,7 +194,8 @@ namespace TimerSpent
                     stampCouples.Add(new StampCouple
                     {
                         startTime = records[i],
-                        stopTime = records[i + 1]
+                        stopTime = records[i + 1],
+                        projectNumber = records[i].ProjectNumber
                     });
                 }
             }
@@ -197,7 +207,8 @@ namespace TimerSpent
                     {
                         Horodatage = DateTime.Now,
                         Balise = BaliseType.Stop
-                    }
+                    },
+                    projectNumber = records.Last().ProjectNumber
                 });
         
         }
@@ -238,7 +249,7 @@ namespace TimerSpent
 
         public void Refresh_TextNotifyIcon()
         {
-            actualTime = getAllTime();
+            actualTime = GetProjectTime();
             string text = actualTime + $"\nProjet : {projectManager.SelectedProject.Description}";
             notifyIcon.Text = text;
         }
@@ -295,11 +306,30 @@ namespace TimerSpent
 
         private void Calcul_Button(object sender, RoutedEventArgs e)   // calcul line
         {
-            string h = getAllTime();
-            TimeResult.Text = h;
+            string tooltip = GetProjectTime();
+            TimeResult.Text = tooltip;
         }
 
-        private string getAllTime()
+        private string GetProjectTime()
+        {
+            Read();
+            DateTime now = DateTime.Now;
+            if (DateTime.Now.Hour < limitHour)
+                now = now.AddDays(-1);
+            DateTime yesterday = new DateTime(now.Year, now.Month, now.Day, limitHour, now.Minute, now.Second);
+            double seconds = 0;
+            foreach (var item in stampCouples.Where(a=>a.projectNumber == projectManager.SelectedProjectNumber))
+                seconds += item.elapsedTime.TotalSeconds;
+
+            TimeSpan timeSpan = TimeSpan.FromSeconds(seconds);
+            int hours = (timeSpan.Days * 24) + timeSpan.Hours;
+            int min = timeSpan.Minutes;
+            string h = hours.ToString() + " h - " + min.ToString() + " min";
+            //h += "\nAujourd'hui : " + new DateTime(timeInDay.Ticks).ToString("HH:mm").Replace(":", "h");
+            return h;
+        }
+
+        private string GetAllTime()
         {
             Read();
             DateTime now = DateTime.Now;
@@ -309,9 +339,7 @@ namespace TimerSpent
             TimeSpan timeInDay = new TimeSpan();
             double seconds = 0;
             foreach (var item in stampCouples)
-            {
                 seconds += item.elapsedTime.TotalSeconds;
-            }
 
            
             if (records.Last().Balise == BaliseType.Start)
@@ -366,6 +394,7 @@ namespace TimerSpent
         }
         public InternalCustomTimeStamp startTime { get; set; }
         public InternalCustomTimeStamp stopTime { get; set; }
+        public int projectNumber { get; set; }
     }
 
     public class InternalCustomTimeStamp

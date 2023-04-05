@@ -10,6 +10,8 @@ namespace TimerSpent.ObjetMetier
 {
     public class ProjectManager
     {
+        private Project selectedProject;
+
         public List<Project> Projects { get; set; }
 
         public int SelectedProjectNumber
@@ -23,7 +25,14 @@ namespace TimerSpent.ObjetMetier
                 SelectedProject = Projects.FirstOrDefault(a => a.Number == value);
             }
         }
-        public Project SelectedProject { get; set; }
+        public Project SelectedProject { get => selectedProject; set
+            {
+                selectedProject = value;
+                MenuItemList.FirstOrDefault(a => a.Project == SelectedProject).Checked = true;
+                MenuItemList.Where(a => a.Project != SelectedProject)?.ToList()?.ForEach(a => a.Checked = false);
+            }
+        }
+        public List<MenuItem_Project> MenuItemList { get; } = new List<MenuItem_Project>();
 
         public ProjectManager()
         {
@@ -63,17 +72,19 @@ namespace TimerSpent.ObjetMetier
                 var menuItem = new MenuItem_Project { Text = project.ToString(), Project = project };
                 menuItem.Click += MenuItem_Click_ProjectSelection;
                 menuItemProject_Selection.MenuItems.Add(menuItem);
+                MenuItemList.Add(menuItem);
             }
         }
 
         private void MenuItem_Click_ProjectSelection(object sender, EventArgs e)
         {
             SelectedProject = (sender as MenuItem_Project).Project;
+            (sender as MenuItem_Project).Checked = true;
             MainWindow.GetInstance().Refresh_TextNotifyIcon();
         }
     }
 
-    class MenuItem_Project : MenuItem
+    public class MenuItem_Project : MenuItem
     {
         public Project Project { get; set; }
         public MenuItem_Project() : base() { }
